@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  ble-simulator:
+    image: docker.io/library/ubuntu:latest
+    container_name: ble_simulator_container
+    command: tail -f /dev/null
+    tty: true
+    stdin_open: true
+    privileged: true
+    network_mode: host
+    volumes:
+      - ../:/app
+      - /sys/bus/usb:/sys/bus/usb:ro
+      - /dev/bus/usb:/dev/bus/usb
+      - /var/run/dbus:/var/run/dbus
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    environment:
+      - TERM=xterm-256color
+    working_dir: /app
+    restart: unless-stopped

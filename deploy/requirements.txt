@@ -1,0 +1,13 @@
+# BLE Simulator Web Service Dependencies
+
+# BLE Communication
+bleak                            # Bluetooth Low Energy library
+# pybluez                        # Classic Bluetooth library (use system package)
+
+# Web Framework
+fastapi                          # Modern web framework
+uvicorn                          # ASGI server
+flask                            # Traditional web framework
+
+# Utilities
+python-dotenv                    # Environment configuration
