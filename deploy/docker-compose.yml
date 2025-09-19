@@ -10,13 +10,23 @@ services:
     stdin_open: true
     privileged: true
     network_mode: host
+    pid: host
+    user: "root"
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_ADMIN
+    devices:
+      - /dev/rfkill:/dev/rfkill
     volumes:
       - ../:/app
       - /sys/bus/usb:/sys/bus/usb:ro
       - /dev/bus/usb:/dev/bus/usb
       - /var/run/dbus:/var/run/dbus
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      - /etc/machine-id:/etc/machine-id:ro
     environment:
       - TERM=xterm-256color
+      - DBUS_SYSTEM_BUS_ADDRESS=unix:path=/var/run/dbus/system_bus_socket
     working_dir: /app
     restart: unless-stopped
