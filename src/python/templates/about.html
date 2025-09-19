@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>关于 BLE Simulator</h2>
+    </div>
+</div>
+
+<div class="row mt-3">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">项目简介</h5>
+                <p class="card-text">
+                    BLE Simulator 是一个基于 Flask + FastAPI 的混合 Web 应用，专门用于蓝牙低功耗 (BLE) 设备的模拟和管理。
+                    该项目展示了如何在同一个应用中同时使用两个流行的 Python Web 框架。
+                </p>
+
+                <h6 class="mt-4">技术架构</h6>
+                <ul>
+                    <li><strong>Flask</strong>: 负责传统的 Web 页面渲染和用户界面</li>
+                    <li><strong>FastAPI</strong>: 提供现代化的 RESTful API 服务</li>
+                    <li><strong>Bootstrap 5</strong>: 响应式前端UI框架</li>
+                    <li><strong>Pydantic</strong>: 数据验证和序列化</li>
+                    <li><strong>Uvicorn</strong>: 高性能ASGI服务器</li>
+                </ul>
+
+                <h6 class="mt-4">主要功能</h6>
+                <ul>
+                    <li>BLE 设备扫描和发现</li>
+                    <li>设备连接和断开管理</li>
+                    <li>实时设备状态监控</li>
+                    <li>RESTful API 接口</li>
+                    <li>自动生成的 API 文档</li>
+                    <li>统一的日志管理系统</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6>版本信息</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr><td>应用版本:</td><td>1.0.0</td></tr>
+                    <tr><td>Flask版本:</td><td id="flask-version">加载中...</td></tr>
+                    <tr><td>FastAPI版本:</td><td id="fastapi-version">加载中...</td></tr>
+                    <tr><td>Python版本:</td><td id="python-version">加载中...</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6>快速链接</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/docs" class="btn btn-outline-primary" target="_blank">API 文档</a>
+                    <a href="/redoc" class="btn btn-outline-secondary" target="_blank">ReDoc 文档</a>
+                    <a href="/api/v1/health" class="btn btn-outline-success" target="_blank">健康检查</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6>系统状态</h6>
+            </div>
+            <div class="card-body">
+                <div id="system-status">
+                    <div class="text-center">
+                        <div class="spinner-border spinner-border-sm" role="status">
+                            <span class="visually-hidden">检查中...</span>
+                        </div>
+                        <span class="ms-2">检查系统状态...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h6>API 端点概览</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>方法</th>
+                                <th>端点</th>
+                                <th>描述</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="badge bg-success">GET</span></td>
+                                <td><code>/api/v1/health</code></td>
+                                <td>API 健康检查</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-primary">POST</span></td>
+                                <td><code>/api/v1/ble/scan</code></td>
+                                <td>扫描 BLE 设备</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-primary">POST</span></td>
+                                <td><code>/api/v1/ble/connect</code></td>
+                                <td>连接到 BLE 设备</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-success">GET</span></td>
+                                <td><code>/api/v1/ble/devices</code></td>
+                                <td>获取已连接设备列表</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-danger">DELETE</span></td>
+                                <td><code>/api/v1/ble/disconnect/{address}</code></td>
+                                <td>断开设备连接</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="mt-3 text-muted">
+                    <small>更多详细信息请查看 <a href="/docs" target="_blank">API 文档</a></small>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadSystemInfo() {
+    try {
+        // 检查 API 健康状态
+        const healthResponse = await fetch('/api/v1/health');
+        const healthData = await healthResponse.json();
+
+        // 获取版本信息
+        const versionResponse = await fetch('/api/v1/version');
+        const versionData = await versionResponse.json();
+
+        // 更新版本信息
+        document.getElementById('fastapi-version').textContent = versionData.framework || 'N/A';
+
+        // 更新系统状态
+        document.getElementById('system-status').innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <span>API 服务:</span>
+                <span class="badge bg-success">正常</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mt-2">
+                <span>最后检查:</span>
+                <small class="text-muted">${new Date().toLocaleString()}</small>
+            </div>
+        `;
+
+    } catch (error) {
+        document.getElementById('system-status').innerHTML = `
+            <div class="alert alert-warning alert-sm">
+                <small>无法获取系统状态</small>
+            </div>
+        `;
+    }
+
+    // 模拟其他版本信息
+    document.getElementById('flask-version').textContent = 'Flask 2.x';
+    document.getElementById('python-version').textContent = 'Python 3.x';
+}
+
+// 页面加载时获取系统信息
+document.addEventListener('DOMContentLoaded', loadSystemInfo);
+</script>
+{% endblock %}

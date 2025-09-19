@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>BLE 设备扫描</h2>
+        <p class="text-muted">扫描附近的蓝牙低功耗设备</p>
+    </div>
+</div>
+
+<div class="row mt-3">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>扫描设置</h5>
+            </div>
+            <div class="card-body">
+                <form id="scanForm">
+                    <div class="mb-3">
+                        <label for="duration" class="form-label">扫描时间 (秒)</label>
+                        <input type="number" class="form-control" id="duration" min="1" max="60" value="10">
+                    </div>
+                    <div class="mb-3">
+                        <label for="filterName" class="form-label">设备名称过滤 (可选)</label>
+                        <input type="text" class="form-control" id="filterName" placeholder="输入设备名称">
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary" id="scanBtn">开始扫描</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">扫描结果</h5>
+                <span id="scanStatus" class="badge bg-secondary">就绪</span>
+            </div>
+            <div class="card-body">
+                <div id="scanResults">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-bluetooth-b fa-3x mb-3"></i>
+                        <p>点击"开始扫描"来搜索BLE设备</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>扫描历史</h5>
+            </div>
+            <div class="card-body">
+                <div id="scanHistory">
+                    <p class="text-muted">暂无扫描历史</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let isScanning = false;
+let scanHistory = [];
+
+document.getElementById('scanForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    if (isScanning) {
+        return;
+    }
+
+    const duration = parseInt(document.getElementById('duration').value);
+    const filterName = document.getElementById('filterName').value;
+    const scanBtn = document.getElementById('scanBtn');
+    const scanStatus = document.getElementById('scanStatus');
+    const resultsContainer = document.getElementById('scanResults');
+
+    isScanning = true;
+    scanBtn.disabled = true;
+    scanBtn.textContent = '扫描中...';
+    scanStatus.textContent = '扫描中';
+    scanStatus.className = 'badge bg-warning';
+
+    resultsContainer.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">扫描中...</span>
+            </div>
+            <p class="mt-2">正在扫描BLE设备，请稍候...</p>
+            <p class="text-muted">扫描时间: ${duration} 秒</p>
+        </div>
+    `;
+
+    try {
+        const scanRequest = {
+            duration: duration,
+            filter_name: filterName || null
+        };
+
+        const response = await fetch('/api/v1/ble/scan', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(scanRequest)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            displayScanResults(result);
+            addToScanHistory(result);
+        } else {
+            throw new Error(result.detail || '扫描失败');
+        }
+    } catch (error) {
+        resultsContainer.innerHTML = `
+            <div class="alert alert-danger">
+                <strong>扫描失败:</strong> ${error.message}
+            </div>
+        `;
+    } finally {
+        isScanning = false;
+        scanBtn.disabled = false;
+        scanBtn.textContent = '开始扫描';
+        scanStatus.textContent = '就绪';
+        scanStatus.className = 'badge bg-secondary';
+    }
+});
+
+function displayScanResults(scanResult) {
+    const container = document.getElementById('scanResults');
+
+    if (scanResult.devices.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted">
+                <i class="fas fa-search fa-2x mb-3"></i>
+                <p>未发现任何设备</p>
+                <p class="small">扫描时间: ${scanResult.duration} 秒</p>
+            </div>
+        `;
+        return;
+    }
+
+    let html = `<div class="row">`;
+    scanResult.devices.forEach(device => {
+        html += `
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title d-flex justify-content-between">
+                            ${device.name || '未知设备'}
+                            <span class="badge bg-info">${device.rssi} dBm</span>
+                        </h6>
+                        <p class="card-text">
+                            <small class="text-muted">地址: ${device.address}</small><br>
+                            ${device.services.length > 0 ?
+                                `<small class="text-muted">服务: ${device.services.join(', ')}</small>` :
+                                '<small class="text-muted">无可用服务信息</small>'
+                            }
+                        </p>
+                        <button class="btn btn-sm btn-success" onclick="connectToDevice('${device.address}')">连接</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+
+    container.innerHTML = html;
+}
+
+async function connectToDevice(address) {
+    try {
+        const response = await fetch('/api/v1/ble/connect', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                device_address: address,
+                timeout: 30
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.connected) {
+            alert(`成功连接到设备: ${address}`);
+        } else {
+            alert(`连接失败: ${result.status || '未知错误'}`);
+        }
+    } catch (error) {
+        alert('连接时发生错误: ' + error.message);
+    }
+}
+
+function addToScanHistory(scanResult) {
+    scanHistory.unshift({
+        timestamp: new Date(),
+        duration: scanResult.duration,
+        deviceCount: scanResult.devices.length
+    });
+
+    // 保持最近10次扫描历史
+    if (scanHistory.length > 10) {
+        scanHistory = scanHistory.slice(0, 10);
+    }
+
+    updateScanHistory();
+}
+
+function updateScanHistory() {
+    const container = document.getElementById('scanHistory');
+
+    if (scanHistory.length === 0) {
+        container.innerHTML = '<p class="text-muted">暂无扫描历史</p>';
+        return;
+    }
+
+    let html = '<div class="table-responsive"><table class="table table-sm">';
+    html += '<thead><tr><th>时间</th><th>扫描时长</th><th>发现设备</th></tr></thead><tbody>';
+
+    scanHistory.forEach(scan => {
+        html += `
+            <tr>
+                <td>${scan.timestamp.toLocaleString()}</td>
+                <td>${scan.duration} 秒</td>
+                <td>${scan.deviceCount} 个</td>
+            </tr>
+        `;
+    });
+
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+}
+</script>
+{% endblock %}

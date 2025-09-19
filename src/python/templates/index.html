@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="jumbotron bg-light p-5 rounded">
+            <h1 class="display-4">欢迎使用 BLE Simulator</h1>
+            <p class="lead">这是一个基于 Flask + FastAPI 的蓝牙低功耗设备模拟器</p>
+            <hr class="my-4">
+            <p>您可以使用此应用扫描、连接和管理 BLE 设备</p>
+            <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                <a class="btn btn-primary btn-lg" href="{{ url_for('ble.scan') }}" role="button">开始扫描</a>
+                <a class="btn btn-outline-secondary btn-lg" href="/docs" target="_blank" role="button">查看API文档</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">Flask Web界面</h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">提供友好的Web界面，支持设备管理和操作</p>
+                <a href="{{ url_for('main.devices') }}" class="btn btn-primary">设备管理</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">FastAPI服务</h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">提供RESTful API接口，支持程序化调用</p>
+                <a href="/docs" target="_blank" class="btn btn-success">API文档</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">BLE功能</h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">支持BLE设备扫描、连接和数据通信</p>
+                <a href="{{ url_for('ble.scan') }}" class="btn btn-info">开始使用</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>实时状态</h5>
+            </div>
+            <div class="card-body">
+                <div id="status-info">
+                    <div class="d-flex justify-content-between">
+                        <span>系统状态:</span>
+                        <span class="badge bg-success">运行中</span>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <span>蓝牙状态:</span>
+                        <span id="bluetooth-status" class="badge bg-info">检查中...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 检查BLE状态
+async function checkBleStatus() {
+    try {
+        const response = await fetch('/api/v1/ble/health');
+        const data = await response.json();
+        document.getElementById('bluetooth-status').textContent = '正常';
+        document.getElementById('bluetooth-status').className = 'badge bg-success';
+    } catch (error) {
+        document.getElementById('bluetooth-status').textContent = '异常';
+        document.getElementById('bluetooth-status').className = 'badge bg-danger';
+    }
+}
+
+// 页面加载时检查状态
+document.addEventListener('DOMContentLoaded', checkBleStatus);
+</script>
+{% endblock %}

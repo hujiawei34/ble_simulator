@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>BLE 设备管理</h2>
+        <p class="text-muted">管理已发现和已连接的BLE设备</p>
+    </div>
+</div>
+
+<div class="row mt-3">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">已连接设备</h5>
+                <button class="btn btn-sm btn-primary" onclick="refreshDevices()">刷新</button>
+            </div>
+            <div class="card-body">
+                <div id="connected-devices">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">加载中...</span>
+                        </div>
+                        <p class="mt-2">加载设备列表...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>快速操作</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('ble.scan') }}" class="btn btn-primary">扫描新设备</a>
+                    <a href="{{ url_for('ble.connect_page') }}" class="btn btn-secondary">连接设备</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>API接口</h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">通过API进行设备操作</p>
+                <div class="d-grid gap-2">
+                    <a href="/api/v1/ble/devices" target="_blank" class="btn btn-outline-info">查看设备API</a>
+                    <a href="/docs" target="_blank" class="btn btn-outline-success">完整API文档</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function refreshDevices() {
+    const container = document.getElementById('connected-devices');
+
+    try {
+        // 显示加载状态
+        container.innerHTML = `
+            <div class="text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">加载中...</span>
+                </div>
+                <p class="mt-2">加载设备列表...</p>
+            </div>
+        `;
+
+        const response = await fetch('/api/v1/ble/devices');
+        const devices = await response.json();
+
+        if (devices.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted">
+                    <p>暂无已连接设备</p>
+                    <a href="{{ url_for('ble.scan') }}" class="btn btn-primary">扫描设备</a>
+                </div>
+            `;
+        } else {
+            let deviceHtml = '<div class="row">';
+            devices.forEach(device => {
+                deviceHtml += `
+                    <div class="col-md-6 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title">${device.name || '未知设备'}</h6>
+                                <p class="card-text">
+                                    <small class="text-muted">地址: ${device.address}</small><br>
+                                    <small class="text-muted">信号强度: ${device.rssi || 'N/A'} dBm</small>
+                                </p>
+                                <button class="btn btn-sm btn-danger" onclick="disconnectDevice('${device.address}')">断开连接</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            deviceHtml += '</div>';
+            container.innerHTML = deviceHtml;
+        }
+    } catch (error) {
+        container.innerHTML = `
+            <div class="alert alert-danger">
+                <strong>错误:</strong> 无法加载设备列表
+            </div>
+        `;
+    }
+}
+
+async function disconnectDevice(address) {
+    try {
+        const response = await fetch(`/api/v1/ble/disconnect/${address}`, {
+            method: 'DELETE'
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            alert('设备已断开连接');
+            refreshDevices();
+        } else {
+            alert('断开连接失败: ' + result.message);
+        }
+    } catch (error) {
+        alert('断开连接时发生错误');
+    }
+}
+
+// 页面加载时刷新设备列表
+document.addEventListener('DOMContentLoaded', refreshDevices);
+</script>
+{% endblock %}

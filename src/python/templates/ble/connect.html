@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>BLE 设备连接</h2>
+        <p class="text-muted">连接到指定的BLE设备</p>
+    </div>
+</div>
+
+<div class="row mt-3">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>连接设置</h5>
+            </div>
+            <div class="card-body">
+                <form id="connectForm">
+                    <div class="mb-3">
+                        <label for="deviceAddress" class="form-label">设备地址</label>
+                        <input type="text" class="form-control" id="deviceAddress"
+                               placeholder="例如: AA:BB:CC:DD:EE:FF" pattern="^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$">
+                        <div class="form-text">请输入有效的MAC地址格式</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="timeout" class="form-label">连接超时 (秒)</label>
+                        <input type="number" class="form-control" id="timeout" min="5" max="120" value="30">
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary" id="connectBtn">连接设备</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6>快速连接</h6>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">常用设备快速连接</p>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary btn-sm" onclick="quickConnect('AA:BB:CC:DD:EE:FF')">
+                        iPhone 12 (AA:BB:CC:DD:EE:FF)
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm" onclick="quickConnect('11:22:33:44:55:66')">
+                        Fitbit Versa (11:22:33:44:55:66)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>连接状态</h5>
+            </div>
+            <div class="card-body">
+                <div id="connectionStatus">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-plug fa-3x mb-3"></i>
+                        <p>请输入设备地址并点击连接</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6>设备信息</h6>
+            </div>
+            <div class="card-body">
+                <div id="deviceInfo">
+                    <p class="text-muted">设备连接后将显示详细信息</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>连接历史</h5>
+            </div>
+            <div class="card-body">
+                <div id="connectionHistory">
+                    <p class="text-muted">暂无连接历史</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let isConnecting = false;
+let connectionHistory = [];
+
+document.getElementById('connectForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    if (isConnecting) {
+        return;
+    }
+
+    const deviceAddress = document.getElementById('deviceAddress').value.trim();
+    const timeout = parseInt(document.getElementById('timeout').value);
+
+    if (!deviceAddress) {
+        alert('请输入设备地址');
+        return;
+    }
+
+    // 验证MAC地址格式
+    const macPattern = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
+    if (!macPattern.test(deviceAddress)) {
+        alert('请输入有效的MAC地址格式');
+        return;
+    }
+
+    await connectToDevice(deviceAddress, timeout);
+});
+
+async function connectToDevice(address, timeout = 30) {
+    if (isConnecting) return;
+
+    const connectBtn = document.getElementById('connectBtn');
+    const statusContainer = document.getElementById('connectionStatus');
+
+    isConnecting = true;
+    connectBtn.disabled = true;
+    connectBtn.textContent = '连接中...';
+
+    statusContainer.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">连接中...</span>
+            </div>
+            <p class="mt-2">正在连接到设备...</p>
+            <p class="text-muted">设备: ${address}</p>
+        </div>
+    `;
+
+    try {
+        const response = await fetch('/api/v1/ble/connect', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                device_address: address,
+                timeout: timeout
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.connected) {
+            displayConnectionSuccess(result);
+            addToConnectionHistory(result, true);
+        } else {
+            throw new Error(result.detail || result.status || '连接失败');
+        }
+    } catch (error) {
+        displayConnectionError(error.message, address);
+        addToConnectionHistory({ device_address: address }, false, error.message);
+    } finally {
+        isConnecting = false;
+        connectBtn.disabled = false;
+        connectBtn.textContent = '连接设备';
+    }
+}
+
+function displayConnectionSuccess(result) {
+    const statusContainer = document.getElementById('connectionStatus');
+    const deviceInfoContainer = document.getElementById('deviceInfo');
+
+    statusContainer.innerHTML = `
+        <div class="alert alert-success">
+            <h6 class="alert-heading">连接成功！</h6>
+            <p class="mb-0">已成功连接到设备: ${result.device_address}</p>
+            <small class="text-muted">连接时间: ${new Date(result.connection_time).toLocaleString()}</small>
+        </div>
+    `;
+
+    let deviceHtml = `
+        <table class="table table-sm">
+            <tr><td><strong>设备地址:</strong></td><td>${result.device_address}</td></tr>
+            <tr><td><strong>连接状态:</strong></td><td><span class="badge bg-success">已连接</span></td></tr>
+            <tr><td><strong>连接时间:</strong></td><td>${new Date(result.connection_time).toLocaleString()}</td></tr>
+    `;
+
+    if (result.services && result.services.length > 0) {
+        deviceHtml += `<tr><td><strong>可用服务:</strong></td><td>${result.services.join(', ')}</td></tr>`;
+    }
+
+    deviceHtml += '</table>';
+
+    deviceHtml += `
+        <div class="d-grid gap-2">
+            <button class="btn btn-danger btn-sm" onclick="disconnectDevice('${result.device_address}')">断开连接</button>
+        </div>
+    `;
+
+    deviceInfoContainer.innerHTML = deviceHtml;
+}
+
+function displayConnectionError(errorMessage, address) {
+    const statusContainer = document.getElementById('connectionStatus');
+
+    statusContainer.innerHTML = `
+        <div class="alert alert-danger">
+            <h6 class="alert-heading">连接失败</h6>
+            <p class="mb-0">无法连接到设备: ${address}</p>
+            <small class="text-muted">错误: ${errorMessage}</small>
+        </div>
+    `;
+}
+
+async function disconnectDevice(address) {
+    try {
+        const response = await fetch(`/api/v1/ble/disconnect/${address}`, {
+            method: 'DELETE'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            document.getElementById('connectionStatus').innerHTML = `
+                <div class="alert alert-info">
+                    <p class="mb-0">设备已断开连接: ${address}</p>
+                </div>
+            `;
+            document.getElementById('deviceInfo').innerHTML = '<p class="text-muted">设备连接后将显示详细信息</p>';
+        } else {
+            alert('断开连接失败: ' + result.message);
+        }
+    } catch (error) {
+        alert('断开连接时发生错误: ' + error.message);
+    }
+}
+
+function quickConnect(address) {
+    document.getElementById('deviceAddress').value = address;
+    connectToDevice(address);
+}
+
+function addToConnectionHistory(connectionData, success, errorMessage = null) {
+    const historyItem = {
+        timestamp: new Date(),
+        address: connectionData.device_address,
+        success: success,
+        error: errorMessage
+    };
+
+    connectionHistory.unshift(historyItem);
+
+    // 保持最近20次连接历史
+    if (connectionHistory.length > 20) {
+        connectionHistory = connectionHistory.slice(0, 20);
+    }
+
+    updateConnectionHistory();
+}
+
+function updateConnectionHistory() {
+    const container = document.getElementById('connectionHistory');
+
+    if (connectionHistory.length === 0) {
+        container.innerHTML = '<p class="text-muted">暂无连接历史</p>';
+        return;
+    }
+
+    let html = '<div class="table-responsive"><table class="table table-sm">';
+    html += '<thead><tr><th>时间</th><th>设备地址</th><th>状态</th><th>备注</th></tr></thead><tbody>';
+
+    connectionHistory.forEach(item => {
+        const statusBadge = item.success ?
+            '<span class="badge bg-success">成功</span>' :
+            '<span class="badge bg-danger">失败</span>';
+
+        html += `
+            <tr>
+                <td>${item.timestamp.toLocaleString()}</td>
+                <td><code>${item.address}</code></td>
+                <td>${statusBadge}</td>
+                <td>${item.error || '-'}</td>
+            </tr>
+        `;
+    });
+
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+}
+</script>
+{% endblock %}

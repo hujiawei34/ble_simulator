@@ -6,8 +6,23 @@ bleak                            # Bluetooth Low Energy library
 
 # Web Framework
 fastapi                          # Modern web framework
-uvicorn                          # ASGI server
+uvicorn[standard]                # ASGI server with standard extras
 flask                            # Traditional web framework
+werkzeug                         # WSGI utility library
+
+# Data Validation and Serialization
+pydantic                         # Data validation using Python type hints
+
+# HTTP and CORS
+fastapi-cors                     # CORS middleware for FastAPI (alternative to built-in)
+
+# Jinja2 Templates (Flask dependency)
+jinja2                           # Template engine
+
+# Development and Production
+gunicorn                         # Production WSGI server
+uvloop                           # Ultra fast asyncio event loop (Unix only)
+httptools                        # Fast HTTP parser
 
 # Utilities
 python-dotenv                    # Environment configuration
