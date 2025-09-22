@@ -9,7 +9,7 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.parent
 sys.path.append(str(PROJECT_ROOT))
 
 from src.python.utils.log_util import LogUtil
-from .routers import ble_api, general
+from .routers import ble_api, general, peripheral_api
 
 logger = LogUtil.get_logger('fastapi_app')
 
@@ -37,6 +37,7 @@ def create_fastapi_app(config) -> FastAPI:
     # 注册路由器
     app.include_router(general.router, prefix=config.API_V1_STR)
     app.include_router(ble_api.router, prefix=config.API_V1_STR)
+    app.include_router(peripheral_api.router, prefix=config.API_V1_STR)
 
     logger.info("FastAPI应用创建完成")
     logger.info(f"API文档地址: /docs")

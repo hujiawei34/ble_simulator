@@ -10,6 +10,7 @@ sys.path.append(str(PROJECT_ROOT))
 from src.python.utils.log_util import LogUtil
 from .routes import main_bp
 from .blueprints.ble_bp import ble_bp
+from .blueprints.peripheral_bp import peripheral_bp
 
 logger = LogUtil.get_logger('flask_app')
 
@@ -29,6 +30,7 @@ def create_flask_app(config):
     # 注册蓝图
     app.register_blueprint(main_bp)
     app.register_blueprint(ble_bp)
+    app.register_blueprint(peripheral_bp)
 
     logger.info(f"Flask应用创建完成，模板目录: {config.TEMPLATE_FOLDER}")
     logger.info(f"静态文件目录: {config.STATIC_FOLDER}")

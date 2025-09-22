@@ -26,3 +26,15 @@ httptools                        # Fast HTTP parser
 
 # Utilities
 python-dotenv                    # Environment configuration
+
+# BLE 模拟器依赖
+# 注意：这些库需要系统级依赖，请先运行 deploy/install_dependencies.sh
+pydbus>=0.6.0                    # D-Bus通信
+pygobject>=3.36.0                # GLib事件循环
+dbus-python>=1.2.16              # Python D-Bus绑定
+
+# 替代方案：如果上述安装失败，可以使用系统包
+# sudo apt install python3-gi python3-dbus python3-bluez
+# 然后在虚拟环境中创建符号链接：
+# ln -s /usr/lib/python3/dist-packages/gi ~/.venv/lib/python3.x/site-packages/
+# ln -s /usr/lib/python3/dist-packages/dbus ~/.venv/lib/python3.x/site-packages/
