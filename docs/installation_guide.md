@@ -179,7 +179,7 @@ python src/python/run_server.py
 **解决方案**:
 ```bash
 # 安装系统依赖
-sudo apt install -y libgirepository1.0-dev libcairo2-dev pkg-config
+sudo apt install -y libgirepository1.0-dev libgirepository-2.0-dev libcairo2-dev pkg-config 
 
 # 或使用系统包
 sudo apt install -y python3-gi
@@ -231,18 +231,7 @@ sudo apt install -y bluez/focal-backports  # Ubuntu 20.04
 
 ## Docker 部署
 
-如果本地安装遇到问题，可以使用 Docker 部署：
-
-```bash
-# 构建镜像
-docker build -t ble_simulator .
-
-# 运行容器 (需要特殊权限)
-docker run -it --privileged --network host \
-    -v /var/run/dbus:/var/run/dbus \
-    -v /sys/bus/usb:/sys/bus/usb:ro \
-    ble_simulator
-```
+不支持docker部署
 
 ## 开发环境设置
 
